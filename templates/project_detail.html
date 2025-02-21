@@ -1,0 +1,233 @@
+<!-- templates/project_detail.html -->
+{% extends "layout.html" %}
+{% block title %}Project: {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Project: {{ project.name }}</h2>
+    <p>{{ project.description }}</p>
+    <!-- Add form to edit project name/description if you want -->
+</div>
+
+<!-- ==================== COMMON VARIABLE NAMES SECTION ==================== -->
+<div id="commonVariableNamesContainer" class="mb-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Common Variable Names</h3>
+            <button class="btn btn-sm btn-success" onclick="showAddCommonVariableNameModal()">Add Variable</button>
+        </div>
+        <div class="card-body">
+            {% if project.common_variable_names %}
+                <ul class="list-group">
+                    {% for var_name in project.common_variable_names %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ var_name }}</span>
+                            <div>
+                                <button class="btn btn-sm btn-danger" onclick="removeCommonVariableName('{{ var_name }}')">Delete</button>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No common variable names added yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Existing Workflows Section ==================== -->
+<!-- Updated Workflows Section with "Add Workflow" Button -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>Workflows in this Project</h3>
+        <button class="btn btn-sm btn-success" onclick="showAddWorkflowModal()">Add Workflow</button>
+    </div>
+    <div class="card-body">
+        {% if workflows %}
+            <ul class="list-group">
+                {% for w_id, w_data in workflows.items() %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <a href="/projects/{{ project.project_id }}/workflow/{{ w_id }}" target="_blank"><strong>{{ w_data.name }}</strong></a><br/>
+                                <small>{{ w_data.workflow_description }}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-secondary" onclick="copyWorkflow('{{ w_id }}')">Copy</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteWorkflow('{{ w_id }}')">Delete</button>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No workflows. Add one!</p>
+        {% endif %}
+    </div>
+</div>
+
+
+
+<!-- ==================== EVALUATIONS SECTION ==================== -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>Evaluations</h3>
+        <button class="btn btn-sm btn-success" onclick="showAddEvaluationModal()">Add Evaluation</button>
+    </div>
+    <div class="card-body" id="evaluationsContainer">
+        <!-- Will be populated by JS -->
+    </div>
+</div>
+
+<!-- ==================== Create Evaluation Section ==================== -->
+<!-- Existing Create Evaluation card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Create Evaluation</h3>
+    </div>
+    <div class="card-body">
+        <button class="btn btn-warning">Coming Soon!</button>
+    </div>
+</div>
+
+<!-- ==================== Add Common Variable Name Modal ==================== -->
+<div class="modal fade" id="addCommonVariableNameModal" tabindex="-1" aria-labelledby="addCommonVariableNameModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"> 
+        <h5 class="modal-title" id="addCommonVariableNameModalLabel">Add Common Variable Name</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addCommonVariableNameForm">
+          <div class="mb-3">
+            <label for="commonVarName" class="form-label">Variable Name:</label>
+            <input type="text" id="commonVarName" class="form-control" placeholder="e.g., progress_note" required>
+            <div class="invalid-feedback">
+                Please enter a variable name.
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="addCommonVariableName()">Add Variable</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Add Evaluation Modal ==================== -->
+<div class="modal fade" id="addEvaluationModal" tabindex="-1" aria-labelledby="addEvaluationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Evaluation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addEvaluationForm">
+          <div class="mb-3">
+            <label class="form-label">Evaluation Name:</label>
+            <input type="text" id="evalName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description:</label>
+            <textarea id="evalDescription" class="form-control" rows="2"></textarea>
+          </div>
+          <hr>
+          <h5>Variable Sets</h5>
+          <p>For each variable set, provide variables (JSON), ideal output, and number of runs.</p>
+          
+          <!-- JSON Upload Section -->
+          <div class="mb-3">
+            <label class="form-label">Upload Variable Sets (JSON):</label>
+            <input type="file" id="uploadVariableSetsFile" accept=".json" class="form-control">
+            <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="uploadVariableSetsJson()">Upload JSON</button>
+            <div class="form-text">Upload a JSON file with the following structure:<br>
+              {
+              <br>&nbsp;&nbsp;"variables_set_id_1": { "variables": {...}, "ideal_output": "...", "num_runs": 1 },
+              <br>&nbsp;&nbsp;"variables_set_id_2": { "variables": {...}, "ideal_output": "...", "num_runs": 1 },
+              <br>... 
+              <br>}
+            </div>
+          </div>
+          
+          <!-- Or Add Variable Sets Manually -->
+          <div id="variableSetsContainer"></div>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="addVariableSet()">+ Add Variable Set</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="createEvaluation()">Create Evaluation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== View Evaluation Results Modal ==================== -->
+<div class="modal fade" id="viewEvaluationModal" tabindex="-1" aria-labelledby="viewEvaluationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewEvaluationModalLabel">Evaluation Results</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="evaluationResultsContainer">
+          <!-- Evaluation results will be populated here by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Add Workflow Modal ==================== -->
+<div class="modal fade" id="addWorkflowModal" tabindex="-1" aria-labelledby="addWorkflowModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"> 
+        <h5 class="modal-title" id="addWorkflowModalLabel">Add Workflow</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addWorkflowForm">
+          <div class="mb-3">
+            <label for="workflowName" class="form-label">Workflow Name:</label>
+            <input type="text" id="workflowName" class="form-control" placeholder="e.g., Data Processing Workflow" required>
+            <div class="invalid-feedback">
+              Please enter a workflow name.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="workflowDescription" class="form-label">Workflow Description:</label>
+            <textarea id="workflowDescription" class="form-control" rows="3" placeholder="Enter a description for the workflow..." required></textarea>
+            <div class="invalid-feedback">
+              Please enter a workflow description.
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <!-- Added ID here -->
+        <button type="button" class="btn btn-primary" id="submitAddWorkflowBtn" onclick="submitAddWorkflow()">Add Workflow</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+    const projectId = "{{ project.project_id }}";
+
+    function showAddWorkflowModal() {
+      const modal = new bootstrap.Modal(document.getElementById('addWorkflowModal'));
+      modal.show();
+  }
+  
+</script>
+<script src="/static/js/main.js"></script>
+{% endblock %}

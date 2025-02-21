@@ -1,0 +1,27 @@
+{
+    "workflow_id": "example123",
+    "name": "Sample Summarization Workflow",
+    "steps": [
+      {
+        "step_id": "step1",
+        "title": "Initialize Summarizer",
+        "description": "Set up the summarization model with specific guidelines.",
+        "inputs": "Article Text",
+        "system_prompt": "You are a helpful assistant that summarizes medical research. Please follow the guidelines strictly.",
+        "user_prompt": "Please summarize the following article in under 200 words: {article_text}",
+        "variable_name": "",
+        "variables": {}
+      },
+      {
+        "step_id": "step2",
+        "title": "Generate Summary",
+        "description": "Generate a concise summary of the provided medical research article.",
+        "inputs": "Summary from Step 1",
+        "system_prompt": "",
+        "user_prompt": "Provide a concise summary based on the previous output.",
+        "variable_name": "summary",
+        "variables": {}
+      }
+    ],
+    "variables": {}
+}

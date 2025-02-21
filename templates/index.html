@@ -1,0 +1,47 @@
+<!-- templates/index.html -->
+{% extends "layout.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Create a New Workflow -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create a New Workflow</h2>
+            </div>
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="workflowName" class="form-control" placeholder="Workflow Name" aria-label="Workflow Name" required>
+                    <button class="btn btn-primary" onclick="createWorkflow()">Create</button>
+                </div>
+                <div class="invalid-feedback d-block" id="workflowNameFeedback" style="display: none;">
+                    Please enter a workflow name.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing Workflows -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Existing Workflows</h2>
+            </div>
+            <div class="card-body">
+                {% if workflows %}
+                    <ul class="list-group">
+                        {% for w_id, w_data in workflows.items() %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="/workflow/{{ w_id }}" class="stretched-link">{{ w_data.name }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No workflows found. Create a new one!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

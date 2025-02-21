@@ -1,0 +1,49 @@
+/* static/css/styles.css */
+
+/* Remove or comment out redundant styles */
+
+/* body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+} */
+
+/* header, footer {
+    text-align: center;
+} */
+
+/* h1 a {
+    text-decoration: none;
+    color: #333;
+} */
+
+/* ... other styles ... */
+
+/* Retain only necessary custom styles */
+.subcalls-container {
+    display: flex;
+    flex-direction: column; /* Bootstrap handles responsiveness */
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.subcall-box {
+    background-color: #eef; /* Optional: Adjust if needed */
+    padding: 10px;
+    border: 1px solid #ccd; /* Optional: Adjust if needed */
+    border-radius: 4px;
+}
+
+/* Modal Styles can be handled by Bootstrap */
+/* .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+} */
+
+/* ... other styles ... */

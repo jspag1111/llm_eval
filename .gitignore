@@ -1,0 +1,10 @@
+
+/projects_data
+.env
+/data
+/backup
+
+.codegpt
+
+/__pycache__
+.vscode

@@ -1,0 +1,167 @@
+<!-- templates/evaluation_results.html -->
+{% extends "layout.html" %}
+
+{% block title %}Evaluation Results: {{ evaluation.name }}{% endblock %}
+
+{% block content %}
+<!-- Embedded CSS for Column Resizing -->
+<style>
+    .wrap-text {
+        white-space: pre-wrap;       /* Preserve whitespace and allow wrapping */
+        word-break: break-word;      /* Break long words to prevent overflow */
+        overflow-wrap: break-word;   /* Ensure wrapping of long words */
+    }
+
+    .table-resizable {
+        table-layout: auto;          /* Allow column widths to adjust dynamically */
+        width: 100%;                 /* Ensure the table takes up the full container width */
+    }
+
+    th, td {
+        word-wrap: break-word;        /* Allow long words to wrap */
+        text-align: left;             /* Align text to the left for readability */
+    }
+
+    th.run-number, td.run-number {
+        width: 5%;                   /* Default width for Run # column */
+        min-width: 50px;             /* Ensure the column does not shrink too much */
+        text-align: center;          /* Center align the content */
+    }
+</style>
+
+<div class="mb-4">
+    <h2>Evaluation Results: {{ evaluation.name }}</h2>
+    <p>{{ evaluation.description }}</p>
+</div>
+
+<!-- Updated Loop: Iterate over variable_set_id and variable_set -->
+{% for vset_id, vset in evaluation.variable_sets.items() %}
+    <div class="mb-5">
+        <h4>Variable Set ID: {{ vset_id }}</h4> 
+        <p><strong>Variables:</strong> 
+            <pre>{{ vset.variables | default({}) | tojson(indent=2) }}</pre>
+        </p>
+        <p><strong>Ideal Output:</strong></p>
+        <div class="bg-light p-3 border rounded wrap-text">{{ vset.ideal_output }}</div>
+
+        <h5>Workflow Comparisons</h5>
+        {% set results_for_varset = evaluation.results %}
+        {% for wf_id, wf_results in results_for_varset.items() %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>Workflow ID:</strong> {{ wf_id }}
+                </div>
+                <div class="card-body">
+                    <!-- Make the table resizable -->
+                    <div class="table-responsive">
+                        <table id="evaluation-table-{{ loop.index }}" class="table table-bordered table-hover table-resizable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="run-number" scope="col">Run #</th>
+                                    <th class="llm-response" scope="col">LLM Response</th>
+                                    <th class="expected-response" scope="col">Expected Response</th>
+                                    <th scope="col">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in wf_results %}
+                                    <!-- Updated Condition: Use variable_set_id -->
+                                    {% if run.variable_set_id == vset_id %}
+                                        <tr>
+                                            <td class="run-number">{{ run.run_index + 1 }}</td>
+                                            <td class="llm-response">
+                                                {% if run.output is string %}
+                                                    <div class="wrap-text">{{ run.output | safe }}</div>
+                                                {% else %}
+                                                    <div class="wrap-text">{{ run.output | tojson_no_escape }}</div>
+                                                {% endif %}
+
+                                            </td>
+                                            <td class="expected-response">
+                                                <div class="wrap-text">{{ vset.ideal_output | safe }}</div>
+                                            </td>
+                                            <td>
+                                                <!-- Updated saveNote Function Call: Pass vset_id -->
+                                                <textarea 
+                                                    class="form-control" 
+                                                    rows="2" 
+                                                    onchange="saveNote('{{ project.project_id }}', '{{ evaluation.evaluation_id }}', '{{ vset_id }}', '{{ wf_id }}', this.value)"
+                                                    style="resize: vertical;"
+                                                >{{ run.notes or '' }}</textarea>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+<!-- Optional: Add a button to download results as JSON or CSV -->
+<div class="mb-4">
+    <button class="btn btn-secondary" onclick="downloadResults()">Download Results</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/colresizable@1.6.0/colresizable.min.js"></script>
+<script>
+    // Initialize colResizable on all evaluation tables
+    document.addEventListener("DOMContentLoaded", function () {
+        const tables = document.querySelectorAll('.table-resizable');
+        tables.forEach(table => {
+            colResizable({
+                liveDrag: true,    // Allows real-time column resizing
+                gripInnerHtml: "<div class='grip'></div>", // Adds a grip to show resizing
+                resizeMode: "flex", // Columns resize proportionally
+                headerOnly: true   // Only header cells are resizable
+            });
+        });
+    });
+
+    function downloadResults() {
+        // Implement a function to download the results, e.g., as JSON or CSV
+        alert("Download functionality not implemented yet.");
+    }
+
+    async function saveNote(projectId, evaluationId, variableSetId, workflowId, notes) {
+        const response = await fetch(`/projects/${projectId}/evaluations/${evaluationId}/results/save_notes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                variable_set_id: variableSetId,  // Updated key
+                workflow_id: workflowId,
+                run_index: null,  // Assuming run_index is not being passed; adjust as needed
+                notes: notes
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.status === "notes_saved") {
+            showAlert("success", "Notes saved successfully.");
+        } else {
+            showAlert("danger", data.error || "Failed to save notes.");
+        }
+    }
+
+    function showAlert(type, message) {
+        const alertPlaceholder = document.createElement('div');
+        alertPlaceholder.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        document.body.prepend(alertPlaceholder);
+        setTimeout(() => {
+            alertPlaceholder.remove();
+        }, 5000);
+    }
+</script>
+
+{% endblock %}

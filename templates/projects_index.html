@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create a New Project</h2>
+            </div>
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="projectName" class="form-control" placeholder="Project Name">
+                    <textarea id="projectDescription" class="form-control" placeholder="Project Description"></textarea>
+                    <button class="btn btn-primary" onclick="createProject()">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Existing Projects</h2>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                    <ul class="list-group">
+                        {% for p_id, p_data in projects.items() %}
+                            <li class="list-group-item">
+                                <a href="/projects/{{ p_id }}">{{ p_data.name }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No projects found. Create a new one!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function createProject() {
+    const name = document.getElementById("projectName").value.trim();
+    const description = document.getElementById("projectDescription").value.trim();
+    const response = await fetch("/projects/create", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name, description })
+    });
+    const data = await response.json();
+    if(data.status === "success"){
+       window.location.href = "/projects/" + data.project_id;
+    } else {
+       alert("Error creating project.");
+    }
+}
+</script>
+{% endblock %}

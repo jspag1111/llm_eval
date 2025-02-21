@@ -1,0 +1,262 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+}
+
+header, footer {
+    text-align: center;
+}
+
+h1 a {
+    text-decoration: none;
+    color: #333;
+}
+
+h2, h3 {
+    color: #555;
+}
+
+input[type="text"], textarea, select, input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    padding: 10px 15px;
+    background-color: #4285F4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #357ae8;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+ul li {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+ul li .step-header {
+    cursor: pointer;
+    padding: 10px;
+    background-color: #f2f2f2;
+    border-radius: 4px;
+}
+
+ul li .step-header:hover {
+    background-color: #e6e6e6;
+}
+
+ul li .step-content {
+    padding: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.subcalls-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.subcall-box {
+    flex: 1 1 auto;
+    min-width: 250px;
+    background-color: #eef;
+    padding: 10px;
+    border: 1px solid #ccd;
+    border-radius: 4px;
+}
+
+#workflowOutput {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #eef;
+    border: 1px solid #ccd;
+    border-radius: 4px;
+}
+
+/* Variables Section Styles */
+
+#variablesContainer {
+    background-color: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#variablesContainer h3 {
+    margin-top: 0;
+}
+
+.existing-variables ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.existing-variables li {
+    background-color: #f1f1f1;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.variable-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.variable-header strong {
+    font-size: 16px;
+}
+
+.variable-content {
+    margin-top: 10px;
+}
+
+.variable-content textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+.variable-content button {
+    margin-top: 5px;
+    margin-right: 5px;
+}
+
+.toggle-icon {
+    font-size: 12px;
+    color: #555;
+}
+
+/* Workflow Output Styles */
+.workflow-step-output {
+    background-color: #fff;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.workflow-step-output h4 {
+    margin-top: 0;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 4px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    body {
+        margin: 10px;
+    }
+
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .subcalls-container {
+        flex-direction: column;
+    }
+
+    .subcall-box {
+        min-width: 100%;
+    }
+}
+
+.subcalls-container {
+    display: flex;
+    flex-direction: column; /* We can stack them vertically, or do flex-row with wrap if you prefer horizontal. */
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.subcall-box {
+    background-color: #eef;
+    padding: 10px;
+    border: 1px solid #ccd;
+    border-radius: 4px;
+}
+
+/* Collapsible header for subcall */
+.subcall-header {
+    background-color: #dde;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.subcall-header:hover {
+    background-color: #ccd;
+}
+
+.subcall-content {
+    padding: 5px;
+    border-top: 1px solid #aaa;
+    display: none;
+}
+
+/* The mini form for new or edit subcalls */
+.subcall-ui {
+    background-color: #fdfdfd;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+}

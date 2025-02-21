@@ -1,0 +1,489 @@
+<!-- templates/workflow_detail.html -->
+
+{% extends "layout.html" %}
+{% block title %}Workflow: {{ workflow.name }}{% endblock %}
+
+{% block content %}
+<style>
+    #splitContainer {
+        transition: all 0.3s ease;
+    }
+    #leftPane {
+        transition: flex 0.3s ease;
+    }
+    #rightPane {
+        transition: flex 0.3s ease;
+        display: none; /* Hidden by default */
+    }
+    #dragHandle {
+        cursor: col-resize;
+        background-color: #ccc;
+        width: 5px;
+        transition: background-color 0.3s ease;
+        display: none; /* Hidden by default */
+    }
+    #dragHandle:hover {
+        background-color: #aaa;
+    }
+    /* Tabs within the side panel */
+    .nav-tabs .nav-link.active {
+        background-color: #f8f9fa;
+    }
+    .nav-tabs .nav-link {
+        cursor: pointer;
+    }
+</style>
+
+<!-- Include CodeMirror CSS and JS -->
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+
+<!-- CodeMirror Theme (Optional) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+
+<!-- CodeMirror Python Mode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+
+
+<div id="splitContainer" class="d-flex flex-row w-100" style="height: calc(100vh - 120px);">
+    <div id="leftPane" style="flex: 1 1 100%; overflow-y: auto; padding: 0.5rem; transition: flex 0.3s;">
+        <div class="mb-4">
+            <h2>Workflow: {{ workflow.name }}</h2>
+        </div>
+        <p>{{ workflow.workflow_description }}</p>
+
+        <!-- ==================== VARIABLES SECTION ==================== -->
+        <div id="variablesContainer" class="mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Variables</h3>
+                </div>
+                <div class="card-body">
+                    <form id="addVariableForm" class="row g-3 needs-validation" novalidate>
+                        <div class="col-md-4">
+                            <label for="varName" class="form-label">Variable Name:</label>
+                            <input type="text" id="varName" class="form-control" placeholder="Variable Name" required>
+                            <div class="invalid-feedback">
+                                Please enter a variable name.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="varContent" class="form-label">Variable Content:</label>
+                            <textarea id="varContent" class="form-control" rows="1"></textarea>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-success w-100" onclick="addVariable()">Add Variable</button>
+                        </div>
+                    </form>
+
+                    <div class="mt-4">
+                        {% if workflow.variables %}
+                            <div class="accordion" id="variablesAccordion">
+                                {% for var_name, var_content in workflow.variables.items() %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading-{{ var_name }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ var_name }}" aria-expanded="false" aria-controls="collapse-{{ var_name }}">
+                                            {{ var_name }}
+                                        </button>
+                                    </h2>
+                                    <div id="collapse-{{ var_name }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ var_name }}" data-bs-parent="#variablesAccordion">
+                                        <div class="accordion-body">
+                                            <textarea id="content-{{ var_name }}" class="form-control mb-2" rows="3">{{ var_content }}</textarea>
+                                            <div class="d-flex">
+                                                <button class="btn btn-sm btn-success me-2" onclick="editVariable('{{ var_name }}')">Save</button>
+                                                <button class="btn btn-sm btn-danger" onclick="removeVariable('{{ var_name }}')">Delete</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No variables added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ==================== STEPS SECTION ==================== -->
+        <div id="stepsContainer" class="mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Steps</h3>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStepModal">Add Step</button>
+                </div>
+                <div class="card-body">
+                    {% if workflow.steps %}
+                        <div class="accordion" id="stepsAccordion">
+                            {% for step in workflow.steps %}
+                                <div class="accordion-item" data-step-id="{{ step.step_id }}">
+                                    <h2 class="accordion-header" id="heading-{{ step.step_id }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ step.step_id }}" aria-expanded="false" aria-controls="collapse-{{ step.step_id }}">
+                                            {{ step.title or "Untitled Step" }}
+                                        </button>
+                                    </h2>
+                                    <div id="collapse-{{ step.step_id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ step.step_id }}" data-bs-parent="#stepsAccordion">
+                                        <div class="accordion-body">
+                                            <div class="mb-3">
+                                                <label><strong>Description:</strong></label>
+                                                <textarea class="form-control" id="step-desc-{{ step.step_id }}" rows="2">{{ step.description }}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label><strong>Inputs:</strong></label>
+                                                <textarea class="form-control" id="step-inputs-{{ step.step_id }}" rows="1">{{ step.inputs }}</textarea>
+                                            </div>
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <button class="btn btn-sm btn-primary me-2" onclick="saveStepEdits('{{ step.step_id }}')">Save Step</button>
+                                                <button class="btn btn-sm btn-danger" onclick="removeStep('{{ step.step_id }}')">Remove Step</button>
+                                            </div>
+
+                                            <!-- ==================== LLM CALLS SECTION ==================== -->
+                                            <div class="mb-3">
+                                                <h5>LLM Calls</h5>
+                                                <button class="btn btn-success btn-sm mb-3" onclick="openCallSidePanel('{{ step.step_id }}', null)">Add LLM Call</button>
+
+                                                {% if step.calls %}
+                                                    <div class="accordion" id="subcallsAccordion-{{ step.step_id }}">
+                                                        {% for call in step.calls %}
+                                                            <div class="accordion-item" data-call-id="{{ call.call_id }}">
+                                                                <h2 class="accordion-header" id="heading-call-{{ call.call_id }}">
+                                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-call-{{ call.call_id }}" aria-expanded="false" aria-controls="collapse-call-{{ call.call_id }}">
+                                                                        {{ call.title or "LLM Call" }}
+                                                                    </button>
+                                                                </h2>
+                                                                <div id="collapse-call-{{ call.call_id }}" class="accordion-collapse collapse" aria-labelledby="heading-call-{{ call.call_id }}" data-bs-parent="#subcallsAccordion-{{ step.step_id }}">
+                                                                    <div class="accordion-body">
+                                                                        <p><strong>System Prompt:</strong> {{ call.system_prompt }}</p>
+                                                                        <!-- Removed User prompt (Legacy) -->
+                                                                        <p><strong>Conversation:</strong> {{ call.conversation }}</p>
+                                                                        <p><strong>Output Variable:</strong> {{ call.variable_name or "N/A" }}</p>
+                                                                        <p><strong>Model Name:</strong> {{ call.model_name }}</p>
+                                                                        <p><strong>Temperature:</strong> {{ call.temperature }}</p>
+                                                                        <p><strong>Max Tokens:</strong> {{ call.max_tokens }}</p>
+                                                                        <p><strong>Top P:</strong> {{ call.top_p }}</p>
+                                                                        <p><strong>Output Format:</strong> {{ call.output_type | capitalize }}</p>
+                                                                        <p><strong>Variables:</strong> {{ call.variables }}</p>
+                                                                        <div class="text-end mt-3">
+                                                                            <button class="btn btn-sm btn-primary" onclick="openCallSidePanel('{{ step.step_id }}', '{{ call.call_id }}')">
+                                                                                Edit LLM Call
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted">No LLM calls in this step.</p>
+                                                {% endif %}
+                                            </div>
+
+                                            <!-- ==================== FUNCTION CALLS SECTION ==================== -->
+                                             <!-- ==================== FUNCTION CALLS SECTION ==================== -->
+                                            <div class="mb-3">
+                                                <h5>Function Calls</h5>
+                                                <button class="btn btn-warning btn-sm mb-3" onclick="openFunctionSidePanel('{{ step.step_id }}', null)">Add Function Call</button>
+
+                                                {% if step.functions %}
+                                                    <div class="accordion" id="functionsAccordion-{{ step.step_id }}">
+                                                        {% for fn in step.functions %}
+                                                            <div class="accordion-item" data-call-id="{{ fn.call_id }}">
+                                                                <h2 class="accordion-header" id="heading-fn-{{ fn.call_id }}">
+                                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-fn-{{ fn.call_id }}" aria-expanded="false" aria-controls="collapse-fn-{{ fn.call_id }}">
+                                                                        {{ fn.title or "Untitled Function" }}
+                                                                    </button>
+                                                                </h2>
+                                                                <div id="collapse-fn-{{ fn.call_id }}" class="accordion-collapse collapse" aria-labelledby="heading-fn-{{ fn.call_id }}" data-bs-parent="#functionsAccordion-{{ step.step_id }}">
+                                                                    <div class="accordion-body">
+                                                                        <p><strong>Code:</strong></p>
+                                                                        <!-- Replace <pre> with formatted CodeMirror display if needed -->
+                                                                        <pre>{{ fn.code }}</pre>
+                                                                        <p><strong>Input Variables:</strong> {{ fn.input_variables }}</p>
+                                                                        <p><strong>Output Variable:</strong> {{ fn.output_variable or "N/A" }}</p>
+                                                                        <div class="text-end mt-3">
+                                                                            <button class="btn btn-sm btn-primary" onclick="openFunctionSidePanel('{{ step.step_id }}', '{{ fn.call_id }}')">
+                                                                                Edit Function
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted">No functions in this step.</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No steps added yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- ==================== EXECUTE WORKFLOW SECTION ==================== -->
+        <div class="mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Execute Workflow</h3>
+                </div>
+                <div class="card-body">
+                    <button id="runWorkflowBtn" class="btn btn-primary">Run Workflow</button>
+
+                    <div id="workflowRunOutput" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== WORKFLOW VISUALIZATION SECTION ==================== -->
+        <div class="mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Workflow Visualization</h3>
+                </div>
+                <div class="card-body">
+                    <a href="/projects/{{ project.project_id }}/workflow/{{ workflow.workflow_id }}/graph" target="_blank" class="btn btn-secondary">View Data Flow Graph</a>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- end #leftPane -->
+
+    <div id="dragHandle" style="width: 5px; cursor: col-resize; background-color: #ccc; display: none;"></div>
+
+    <!-- ==================== SIDE PANEL (rightPane) ==================== -->
+    <div id="rightPane" style="flex: 0 0 0%; overflow-y: auto; padding: 0.5rem; transition: flex 0.3s; display: none;">
+        <!-- Navigation Tabs for LLM Call Editor and Function Call Editor -->
+        <ul class="nav nav-tabs mb-3" id="callEditorTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="llm-editor-tab" data-bs-toggle="tab" data-bs-target="#llm-editor" type="button" role="tab" aria-controls="llm-editor" aria-selected="true">LLM Call Editor</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="function-editor-tab" data-bs-toggle="tab" data-bs-target="#function-editor" type="button" role="tab" aria-controls="function-editor" aria-selected="false">Function Call Editor</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="callEditorContent">
+            <!-- LLM Call Editor -->
+            <div class="tab-pane fade show active" id="llm-editor" role="tabpanel" aria-labelledby="llm-editor-tab">
+                <form id="llmCallForm">
+                    <input type="hidden" id="llmCallStepId" value="">
+                    <input type="hidden" id="llmCallId" value="">
+
+                    <!-- Title Field -->
+                    <div class="mb-3">
+                        <label class="form-label">Title:</label>
+                        <input type="text" class="form-control" id="llmCallTitle" required>
+                    </div>
+
+                    <!-- System Prompt -->
+                    <div class="mb-3">
+                        <label class="form-label">System Prompt:</label>
+                        <textarea rows="2" class="form-control" id="llmSystemPrompt" required></textarea>
+                    </div>
+
+                    <!-- Conversation (Multi-Turn) -->
+                    <label class="form-label">Conversation (Multi-Turn):</label>
+                    <div id="conversationContainer" class="mb-3" style="border: 1px solid #ccc; padding: 8px;">
+                        <!-- Each message row appended here by JS -->
+                    </div>
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="addConversationMessage('user')">+ User Message</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addConversationMessage('assistant')">+ Assistant Message</button>
+                    </div>
+
+                    <!-- Output Variable Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Output Variable Name (optional):</label>
+                        <input type="text" class="form-control" id="llmVariableName">
+                    </div>
+
+                    <!-- Variables (JSON) -->
+                    <div class="mb-3">
+                        <label class="form-label">Variables (JSON):</label>
+                        <textarea rows="2" class="form-control" id="llmVariables"></textarea>
+                    </div>
+
+                    <!-- Output Format -->
+                    <div class="mb-3">
+                        <label class="form-label">Output Format:</label>
+                        <select class="form-select" id="llmOutputFormat" required>
+                            <option value="text">Text</option>
+                            <option value="json">JSON</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select an output format.
+                        </div>
+                    </div>
+                    
+                    <!-- =========================
+                        NEW: Pydantic & Retries Fields
+                        Only visible if Output Format = JSON
+                    ========================== -->
+                    <div class="mb-3" id="pydanticOptionsContainer" style="display: none;">
+                        <label class="form-label">Pydantic Model (Optional):</label>
+                        <!-- Drop-down populated dynamically with available models -->
+                        <select class="form-select" id="llmPydanticDefinition">
+                            <option value="">(None)</option>
+                            <!-- Additional <option> elements inserted dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="retryOptionsContainer" style="display: none;">
+                        <label class="form-label">Max Retries:</label>
+                        <input type="number" class="form-control" id="llmMaxRetries" value="0" min="0">
+                    </div>
+                    <!-- ========================= -->
+
+                    <hr>
+                    <h5>LLM Call Parameters</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Model Name:</label>
+                        <select class="form-select" id="llmModelName">
+                            <option value="huggingface_llama3.1_70b_4bit">HF Llama 3.1 70b 4bit</option>
+                            <option value="huggingface_llama3.1_70b">HF Llama 3.3 70b</option>
+                            <option value="huggingface_phi-4">HF Phi-4</option>
+                            <option value="groq-llm">Groq LLM</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Temperature:</label>
+                        <input type="number" step="0.1" class="form-control" id="llmTemperature" value="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Tokens:</label>
+                        <input type="number" class="form-control" id="llmMaxTokens" value="1024">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Top P:</label>
+                        <input type="number" step="0.1" class="form-control" id="llmTopP" value="1.0">
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-danger" id="llmRemoveCallBtn" style="display: none;" onclick="removeLLMCall()">Remove Call</button>
+                        <button type="button" class="btn btn-success" onclick="saveLLMCall()">Save Call</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Function Call Editor -->
+            <div class="tab-pane fade" id="function-editor" role="tabpanel" aria-labelledby="function-editor-tab">
+                <form id="functionForm">
+                    <input type="hidden" id="functionCallStepId" value="">
+                    <input type="hidden" id="functionCallId" value="">
+
+                    <!-- Title Field -->
+                    <div class="mb-3">
+                        <label class="form-label">Title:</label>
+                        <input type="text" class="form-control" id="functionTitle" required>
+                    </div>
+
+                    <!-- Input Variables (JSON) -->
+                    <div class="mb-3">
+                        <label class="form-label">Input Variables (JSON):</label>
+                        <textarea rows="2" class="form-control" id="functionInputVars">{}</textarea>
+                    </div>
+
+                    <!-- Output Variable Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Output Variable Name:</label>
+                        <input type="text" class="form-control" id="functionOutputVar">
+                    </div>
+
+                    <!-- Function Code with CodeMirror -->
+                    <div class="mb-3">
+                        <label class="form-label">Function Code:</label>
+                        <textarea rows="6" class="form-control" id="functionCode" placeholder="# Python code that sets output_data = {...}"></textarea>
+                        <div class="form-text">Define a Python function that processes input_data and assigns the result to output_data.<br>Example:
+<pre>
+output_data = {
+    "result": input_data["value"] + 1
+}
+</pre>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-danger" id="functionRemoveBtn" style="display: none;" onclick="removeFunctionCall()">Remove Function</button>
+                        <button type="button" class="btn btn-success" onclick="saveFunctionCall()">Save Function</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SIDE PANEL SCRIPT ==================== -->
+    <script>
+        const projectId = "{{ project.project_id }}";
+        const workflowId = "{{ workflow['workflow_id'] }}";
+    </script>
+    <script src="/static/js/main.js"></script>
+</div>
+
+<!-- ==================== ADD STEP MODAL ==================== -->
+<div class="modal fade" id="addStepModal" tabindex="-1" aria-labelledby="addStepModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add a New Step</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addStepFormModal">
+                    <!-- Updated ID: titleModal -> newStepTitle -->
+                    <div class="mb-3">
+                        <label for="newStepTitle" class="form-label">Title:</label>
+                        <input type="text" id="newStepTitle" class="form-control" placeholder="Step Title" required>
+                        <div class="invalid-feedback">
+                            Please enter a step title.
+                        </div>
+                    </div>
+                    <!-- Updated ID: descriptionModal -> newStepDescription -->
+                    <div class="mb-3">
+                        <label for="newStepDescription" class="form-label">Description:</label>
+                        <textarea id="newStepDescription" class="form-control" rows="2" placeholder="Short description" required></textarea>
+                        <div class="invalid-feedback">
+                            Please enter a description.
+                        </div>
+                    </div>
+                    <!-- Updated ID: inputsModal -> newStepInputs -->
+                    <div class="mb-3">
+                        <label for="newStepInputs" class="form-label">Inputs:</label>
+                        <input type="text" id="newStepInputs" class="form-control" placeholder="Describe the inputs used">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <!-- Corrected Button: Changed onclick from addStepModal() to addStep() -->
+                <button type="button" class="btn btn-primary" onclick="addStep()">Add Step</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== GENERATE CODE SECTION ==================== -->
+<div class="mb-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Generate Code</h3>
+        </div>
+        <div class="card-body">
+            <button id="createCodeBtn" class="btn btn-primary">Create Code</button>
+            <div id="generatedCodeContainer" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

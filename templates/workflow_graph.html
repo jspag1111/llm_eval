@@ -1,0 +1,12 @@
+<!-- templates/workflow_graph.html -->
+{% extends "layout.html" %}
+{% block title %}Workflow Graph: {{ workflow_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Workflow Data Flow Graph: {{ workflow_name }}</h2>
+    <div class="mermaid">
+        {{ mermaid_diagram | safe }}
+    </div>
+</div>
+{% endblock %}
